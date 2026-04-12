@@ -1,2 +1,28 @@
-{}
-
+{
+  "updated_at": "2026-04-12T17:09:21.548352+00:00",
+  "services": [
+    {
+      "name": "主站首页",
+      "url": "https://math.ai.b1apps.com:54321",
+      "status": "down",
+      "status_code": null,
+      "latency_ms": 10220,
+      "error": "<urlopen error timed out>"
+    }
+  ],
+  "history": [
+    {
+      "time": "2026-04-12T17:09:21.548352+00:00",
+      "services": [
+        {
+          "name": "主站首页",
+          "url": "https://math.ai.b1apps.com:54321",
+          "status": "down",
+          "status_code": null,
+          "latency_ms": 10220,
+          "error": "<urlopen error timed out>"
+        }
+      ]
+    }
+  ]
+}
