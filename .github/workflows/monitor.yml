@@ -17,8 +17,9 @@ jobs:
       - name: Run health checks
         id: checks
         run: |
-          python3 scripts/check.py > data/status.json
-          echo "done"
+          python3 scripts/check.py > data/status.json 2>data/error.log || true
+          cat data/error.log || true
+          echo "exit"
 
       - name: Commit results
         run: |
