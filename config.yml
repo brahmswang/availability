@@ -1,5 +1,11 @@
 services:
-  - name: "主站首页"
+  - name: "MATH"
     url: "http://math.ai.b1apps.com:30000/login"
+    expected_status: 200
+    timeout: 10
+
+services:
+  - name: "主站首页"
+    url: "https://www.nexttao.com"
     expected_status: 200
     timeout: 10
