@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>服务状态监控</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0a0c0f;
+    --surface:  #111418;
+    --surface2: #181c22;
+    --border:   rgba(255,255,255,0.07);
+    --border2:  rgba(255,255,255,0.13);
+    --text:     #e8eaf0;
+    --muted:    #6b7280;
+    --up:       #22c55e;
+    --up-bg:    rgba(34,197,94,0.10);
+    --up-border:rgba(34,197,94,0.25);
+    --down:     #ef4444;
+    --down-bg:  rgba(239,68,68,0.10);
+    --down-border:rgba(239,68,68,0.30);
+    --deg:      #f59e0b;
+    --deg-bg:   rgba(245,158,11,0.10);
+    --deg-border:rgba(245,158,11,0.30);
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Sora', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 0 0 4rem;
+  }
+
+  /* ── header ── */
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 2rem 2.5rem 1.5rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .header-title {
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: var(--mono);
+    margin-bottom: 0.35rem;
+  }
+  .header-name {
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .updated {
+    font-size: 0.72rem;
+    font-family: var(--mono);
+    color: var(--muted);
+    text-align: right;
+    line-height: 1.8;
+  }
+  .updated span { color: var(--text); }
+
+  /* ── overall banner ── */
+  .banner {
+    margin: 1.8rem 2.5rem 0;
+    border-radius: 10px;
+    padding: 1rem 1.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid;
+    transition: all 0.3s;
+  }
+  .banner.all-up   { background: var(--up-bg);   border-color: var(--up-border);   color: var(--up); }
+  .banner.has-down { background: var(--down-bg); border-color: var(--down-border); color: var(--down); }
+  .banner.has-deg  { background: var(--deg-bg);  border-color: var(--deg-border);  color: var(--deg); }
+  .banner-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .banner.all-up .banner-dot { animation: pulse-green 2s infinite; }
+  @keyframes pulse-green {
+    0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+    50%      { opacity: 0.8; box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+  }
+
+  /* ── summary row ── */
+  .summary {
+    margin: 1.5rem 2.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.75rem;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+  }
+  .stat-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: var(--mono);
+    margin-bottom: 0.4rem;
+  }
+  .stat-value {
+    font-size: 1.7rem;
+    font-weight: 600;
+    font-family: var(--mono);
+    line-height: 1;
+  }
+  .stat-value.up   { color: var(--up); }
+  .stat-value.down { color: var(--down); }
+  .stat-value.deg  { color: var(--deg); }
+  .stat-value.num  { color: var(--text); }
+
+  /* ── grid ── */
+  .grid {
+    margin: 0 2.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+  }
+
+  /* ── service card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.4rem 1rem;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--border2); }
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.85rem;
+  }
+  .card-name {
+    font-weight: 600;
+    font-size: 0.92rem;
+    line-height: 1.4;
+  }
+  .card-url {
+    font-size: 0.68rem;
+    font-family: var(--mono);
+    color: var(--muted);
+    margin-top: 0.2rem;
+    word-break: break-all;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.7rem;
+    font-family: var(--mono);
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 20px;
+    border: 1px solid;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .badge-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .badge.up   { color: var(--up);   background: var(--up-bg);   border-color: var(--up-border); }
+  .badge.down { color: var(--down); background: var(--down-bg); border-color: var(--down-border); }
+  .badge.deg  { color: var(--deg);  background: var(--deg-bg);  border-color: var(--deg-border); }
+  .badge.unknown { color: var(--muted); background: transparent; border-color: var(--border2); }
+
+  .card-meta {
+    display: flex;
+    gap: 1.5rem;
+    font-size: 0.72rem;
+    font-family: var(--mono);
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 0.75rem;
+    margin-top: 0.4rem;
+  }
+  .card-meta span { color: var(--text); }
+
+  /* ── sparkline ── */
+  .sparkline-wrap {
+    margin: 0.5rem 0 0.75rem;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 28px;
+  }
+  .spark-bar {
+    flex: 1;
+    border-radius: 2px;
+    min-height: 3px;
+    transition: opacity 0.2s;
+  }
+  .spark-bar:hover { opacity: 0.7; }
+  .spark-bar.up   { background: var(--up); }
+  .spark-bar.down { background: var(--down); }
+  .spark-bar.deg  { background: var(--deg); }
+  .spark-bar.unknown { background: var(--border2); height: 3px !important; }
+
+  /* ── error msg ── */
+  .card-error {
+    font-size: 0.7rem;
+    font-family: var(--mono);
+    color: var(--down);
+    background: var(--down-bg);
+    border: 1px solid var(--down-border);
+    border-radius: 6px;
+    padding: 0.4rem 0.65rem;
+    margin-top: 0.6rem;
+    word-break: break-all;
+  }
+
+  /* ── loading / error state ── */
+  .loading {
+    text-align: center;
+    padding: 4rem;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.85rem;
+  }
+
+  /* ── footer ── */
+  footer {
+    margin: 3rem 2.5rem 0;
+    border-top: 1px solid var(--border);
+    padding-top: 1.2rem;
+    font-size: 0.68rem;
+    font-family: var(--mono);
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 600px) {
+    .header, .banner, .summary, .grid, footer { margin-left: 1rem; margin-right: 1rem; }
+    .header { padding: 1.5rem 1rem 1.2rem; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div>
+    <p class="header-title">Status Dashboard</p>
+    <h1 class="header-name">服务监控面板</h1>
+  </div>
+  <div class="updated" id="updated-info">
+    加载中…
+  </div>
+</header>
+
+<div class="banner" id="banner" style="display:none"></div>
+
+<div class="summary" id="summary" style="display:none">
+  <div class="stat">
+    <p class="stat-label">正常</p>
+    <p class="stat-value up" id="cnt-up">—</p>
+  </div>
+  <div class="stat">
+    <p class="stat-label">故障</p>
+    <p class="stat-value down" id="cnt-down">—</p>
+  </div>
+  <div class="stat">
+    <p class="stat-label">降级</p>
+    <p class="stat-value deg" id="cnt-deg">—</p>
+  </div>
+  <div class="stat">
+    <p class="stat-label">平均延迟</p>
+    <p class="stat-value num" id="avg-latency">—</p>
+  </div>
+</div>
+
+<div class="grid" id="grid">
+  <div class="loading">正在加载状态数据…</div>
+</div>
+
+<footer>
+  <span>数据由 GitHub Actions 每10分钟更新一次</span>
+  <span id="next-check"></span>
+</footer>
+
+<script>
+const STATUS_URL = 'data/status.json';
+
+function statusLabel(s) {
+  if (s === 'up')      return '正常';
+  if (s === 'down')    return '故障';
+  if (s === 'degraded') return '降级';
+  return '未知';
+}
+
+function fmtLatency(ms) {
+  if (ms == null) return '—';
+  return ms < 1000 ? ms + ' ms' : (ms/1000).toFixed(1) + ' s';
+}
+
+function fmtTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleString('zh-CN', { hour12: false,
+    month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function buildSparkline(svcName, history) {
+  const wrap = document.createElement('div');
+  wrap.className = 'sparkline-wrap';
+  // last 48 samples = 4h
+  const samples = (history || []).map(h => {
+    const s = (h.services || []).find(x => x.name === svcName);
+    return s ? { status: s.status, latency: s.latency_ms } : null;
+  }).slice(-48);
+
+  if (samples.length === 0) return wrap;
+
+  const maxLat = Math.max(...samples.map(s => s ? (s.latency||0) : 0), 1);
+
+  samples.forEach(s => {
+    const bar = document.createElement('div');
+    bar.className = 'spark-bar';
+    if (!s) {
+      bar.classList.add('unknown');
+    } else {
+      bar.classList.add(s.status === 'up' ? 'up' : s.status === 'degraded' ? 'deg' : 'down');
+      const h = s.status === 'up'
+        ? Math.max(4, Math.round((s.latency / maxLat) * 24))
+        : 24;
+      bar.style.height = h + 'px';
+    }
+    wrap.appendChild(bar);
+  });
+  return wrap;
+}
+
+function render(data) {
+  const services = data.services || [];
+  const history  = data.history  || [];
+  const updatedAt = data.updated_at;
+
+  // Header
+  document.getElementById('updated-info').innerHTML =
+    `最后更新<br><span>${fmtTime(updatedAt)}</span>`;
+
+  // Summary
+  const up   = services.filter(s => s.status === 'up').length;
+  const down = services.filter(s => s.status === 'down').length;
+  const deg  = services.filter(s => s.status === 'degraded').length;
+  const lats = services.filter(s => s.latency_ms != null).map(s => s.latency_ms);
+  const avg  = lats.length ? Math.round(lats.reduce((a,b)=>a+b,0)/lats.length) : null;
+
+  document.getElementById('cnt-up').textContent = up;
+  document.getElementById('cnt-down').textContent = down;
+  document.getElementById('cnt-deg').textContent = deg;
+  document.getElementById('avg-latency').textContent = fmtLatency(avg);
+  document.getElementById('summary').style.display = '';
+
+  // Banner
+  const banner = document.getElementById('banner');
+  banner.style.display = '';
+  if (down > 0) {
+    banner.className = 'banner has-down';
+    banner.innerHTML = `<span class="banner-dot"></span>检测到 ${down} 个服务发生故障`;
+  } else if (deg > 0) {
+    banner.className = 'banner has-deg';
+    banner.innerHTML = `<span class="banner-dot"></span>${deg} 个服务响应异常`;
+  } else {
+    banner.className = 'banner all-up';
+    banner.innerHTML = `<span class="banner-dot"></span>全部 ${up} 个服务运行正常`;
+  }
+
+  // Cards
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  if (services.length === 0) {
+    grid.innerHTML = '<div class="loading">暂无服务数据，请检查 config.yml 配置</div>';
+    return;
+  }
+
+  services.forEach(svc => {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const st = svc.status || 'unknown';
+    const badgeCls = st === 'up' ? 'up' : st === 'down' ? 'down' : st === 'degraded' ? 'deg' : 'unknown';
+
+    card.innerHTML = `
+      <div class="card-top">
+        <div>
+          <p class="card-name">${svc.name}</p>
+          <p class="card-url">${svc.url}</p>
+        </div>
+        <span class="badge ${badgeCls}">
+          <span class="badge-dot"></span>${statusLabel(st)}
+        </span>
+      </div>
+    `;
+
+    card.appendChild(buildSparkline(svc.name, history));
+
+    const meta = document.createElement('div');
+    meta.className = 'card-meta';
+    meta.innerHTML = `
+      延迟 <span>${fmtLatency(svc.latency_ms)}</span>
+      &nbsp;&nbsp;状态码 <span>${svc.status_code ?? '—'}</span>
+    `;
+    card.appendChild(meta);
+
+    if (svc.error) {
+      const err = document.createElement('p');
+      err.className = 'card-error';
+      err.textContent = svc.error;
+      card.appendChild(err);
+    }
+
+    grid.appendChild(card);
+  });
+
+  // Countdown to next check
+  if (updatedAt) {
+    const next = new Date(new Date(updatedAt).getTime() + 10*60*1000);
+    function tick() {
+      const diff = Math.max(0, Math.floor((next - Date.now()) / 1000));
+      const m = Math.floor(diff/60), s = diff % 60;
+      document.getElementById('next-check').textContent =
+        `下次检测约 ${m}:${String(s).padStart(2,'0')} 后`;
+    }
+    tick();
+    setInterval(tick, 1000);
+  }
+}
+
+async function load() {
+  try {
+    const r = await fetch(STATUS_URL + '?t=' + Date.now());
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    render(data);
+  } catch(e) {
+    document.getElementById('grid').innerHTML =
+      `<div class="loading">无法加载状态数据：${e.message}<br><br>
+       请确认 GitHub Actions 已运行并生成 data/status.json</div>`;
+  }
+}
+
+load();
+// 每5分钟自动刷新页面
+setTimeout(() => location.reload(), 10 * 60 * 1000);
+</script>
+</body>
+</html>
