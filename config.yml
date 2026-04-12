@@ -1,5 +1,5 @@
 services:
   - name: "主站首页"
-    url: "https://math.ai.b1apps.com:54321"
+    url: "https://math.ai.b1apps.com:54321/login"
     expected_status: 200
     timeout: 10
