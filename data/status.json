@@ -1,12 +1,12 @@
 {
-  "updated_at": "2026-04-17T13:53:28.526042+00:00",
+  "updated_at": "2026-04-17T14:46:12.184487+00:00",
   "services": [
     {
       "name": "MATH",
       "url": "http://math.ai.b1apps.com:30000/login",
       "status": "down",
       "status_code": null,
-      "latency_ms": 10247,
+      "latency_ms": 10455,
       "error": "<urlopen error timed out>"
     },
     {
@@ -14,20 +14,20 @@
       "url": "https://www.nexttao.com",
       "status": "up",
       "status_code": 200,
-      "latency_ms": 1387,
+      "latency_ms": 1420,
       "error": null
     }
   ],
   "history": [
     {
-      "time": "2026-04-17T13:53:28.526042+00:00",
+      "time": "2026-04-17T14:46:12.184487+00:00",
       "services": [
         {
           "name": "MATH",
           "url": "http://math.ai.b1apps.com:30000/login",
           "status": "down",
           "status_code": null,
-          "latency_ms": 10247,
+          "latency_ms": 10455,
           "error": "<urlopen error timed out>"
         },
         {
@@ -35,7 +35,7 @@
           "url": "https://www.nexttao.com",
           "status": "up",
           "status_code": 200,
-          "latency_ms": 1387,
+          "latency_ms": 1420,
           "error": null
         }
       ]
